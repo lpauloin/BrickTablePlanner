@@ -84,60 +84,42 @@ def load_minifig_template(path):
 
 
 def build_minifig(ctx, template, stud_x, stud_z):
-    """Reposition a minifig template to (stud_x, stud_z) in studs."""
+    """
+    Reposition a minifig template to (stud_x, stud_z) in stud space.
+
+    The template orientation is preserved exactly as exported.
+    No rotation is applied.
+    """
 
     parts = list(template)
 
-    # Center in X/Z only (we keep Y as provided by the template)
+    # Compute template center in X/Z (we do not touch Y)
     cx = sum(p.x for p in parts) / len(parts)
     cz = sum(p.z for p in parts) / len(parts)
 
-    # Rotation validated for the Studio-exported template:
-    # rotate around Y by -90 degrees.
-    R = (
-        0, 0, -1,
-        0, 1, 0,
-        1, 0, 0,
-    )
-
+    # Target position in LDraw units
     dx = ctx.studs(stud_x)
     dz = ctx.studs(stud_z)
+    dy = ctx.baseplate_origin_y
 
-    transformed = []
+    out = []
+
     for p in parts:
+
+        # Recenter around template origin
         nx = p.x - cx
         ny = p.y
         nz = p.z - cz
 
-        rx = R[0] * nx + R[1] * ny + R[2] * nz
-        ry = R[3] * nx + R[4] * ny + R[5] * nz
-        rz = R[6] * nx + R[7] * ny + R[8] * nz
-        transformed.append((p, rx, ry, rz))
+        # Translate to final position
+        final_x = nx + dx
+        final_y = ny + dy
+        final_z = nz + dz
 
-    # Vertical alignment: keep current output behavior.
-    # In our reference template, the feet should end up on Y = -30.
-    dy = ctx.baseplate_origin_y - 30
-
-    out = []
-    for p, rx, ry, rz in transformed:
-        final_x = rx + dx
-        final_y = ry + dy
-        final_z = rz + dz
-
-        # Rotate the part orientation matrix as well.
-        a = R[0] * p.a + R[1] * p.d + R[2] * p.g
-        b = R[0] * p.b + R[1] * p.e + R[2] * p.h
-        c = R[0] * p.c + R[1] * p.f + R[2] * p.i
-        d = R[3] * p.a + R[4] * p.d + R[5] * p.g
-        e = R[3] * p.b + R[4] * p.e + R[5] * p.h
-        f = R[3] * p.c + R[4] * p.f + R[5] * p.i
-        g = R[6] * p.a + R[7] * p.d + R[8] * p.g
-        h = R[6] * p.b + R[7] * p.e + R[8] * p.h
-        i_ = R[6] * p.c + R[7] * p.f + R[8] * p.i
-
+        # IMPORTANT: keep original orientation matrix
         out.append(
             f"1 {p.color} {final_x} {final_y} {final_z} "
-            f"{a} {b} {c} {d} {e} {f} {g} {h} {i_} "
+            f"{p.a} {p.b} {p.c} {p.d} {p.e} {p.f} {p.g} {p.h} {p.i} "
             f"{p.part_id}"
         )
 

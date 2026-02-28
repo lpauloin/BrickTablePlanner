@@ -23,7 +23,6 @@ row 0 of the pattern is visually at the top in BrickLink Studio.
 
 from context import PLATE_HEIGHT
 
-
 PLATE_1x1 = "3024.dat"
 
 
@@ -147,45 +146,79 @@ def render_text_5x7(text, gap=1):
 
 
 def build_centered_digit(ctx, text, center_stud_x, center_stud_z, color=15):
-    """Place a 5x7 digit string centered on (center_stud_x, center_stud_z).
+    """
+    Render a digit (or multi-digit string) centered at a given stud position.
 
-    Parameters are in studs.
+    Parameters
+    ----------
+    ctx : SceneContext
+        Scene coordinate system helper (LDUs conversion, baseplate height, etc.).
+    text : str
+        Digit string to render (e.g. "1", "10").
+    center_stud_x : float
+        X coordinate of the desired center in stud space.
+    center_stud_z : float
+        Z coordinate of the desired center in stud space.
+    color : int
+        LDraw color code for the plates.
 
-    The centering is done on the *pixel grid*, so we use (width-1)/2 and
-    (height-1)/2 to avoid half-stud offsets.
+    Notes
+    -----
+    - The digit is defined as a 5x7 bitmap.
+    - Stud coordinates are integer-aligned.
+    - Baseplates are centered on half-stud offsets in the scene.
+      Therefore, a +0.5 stud correction is applied to ensure proper alignment
+      with the physical stud grid.
     """
 
+    # Generate the 5x7 bitmap matrix (list of strings)
     matrix = render_text_5x7(text)
-    height = len(matrix)
-    width = len(matrix[0])
 
-    # Top-left pixel coordinate (in studs)
-    origin_x = center_stud_x - (width - 1) / 2
-    origin_z = center_stud_z - (height - 1) / 2
+    height = len(matrix)  # number of rows (typically 7)
+    width = len(matrix[0])  # number of columns (typically 5 per digit)
 
-    # Place the 1x1 plates on the baseplate surface.
-    # (PLATE_HEIGHT is not used for compatibility; the current output expects
-    #  y == ctx.baseplate_top_origin_y)
-    y = ctx.baseplate_top_origin_y
+    # ---------------------------------------------------------------------
+    # Stud grid alignment correction
+    #
+    # Baseplates are positioned by their geometric center.
+    # However, LEGO studs are positioned on integer coordinates.
+    #
+    # A half-stud offset ensures the bitmap aligns exactly on the stud grid.
+    # ---------------------------------------------------------------------
+    half_stud = 0.5
+
+    # Compute the top-left origin of the bitmap in stud space.
+    # (width - 1)/2 and (height - 1)/2 give the exact pixel center.
+    origin_x = center_stud_x - (width - 1) / 2 + half_stud
+    origin_z = center_stud_z - (height - 1) / 2 + half_stud
 
     lines = []
+
+    # Iterate through the bitmap
     for row_idx, row in enumerate(matrix):
-        for col_idx, px in enumerate(row):
-            if px != "#":
+        for col_idx, pixel in enumerate(row):
+
+            # Only place plates where the bitmap contains a filled pixel
+            if pixel != "#":
                 continue
 
+            # Compute stud position of this pixel
             stud_x = origin_x + col_idx
 
-            # Flip vertically: row 0 should be visually at the top.
+            # Vertical inversion: bitmap row 0 is top visually,
+            # but increasing Z moves "up" in the scene.
             stud_z = origin_z + (height - 1 - row_idx)
 
+            # Convert stud coordinates to LDraw units (LDUs)
             x = ctx.studs(stud_x)
             z = ctx.studs(stud_z)
 
+            # Plates sit exactly on top of the baseplate surface
+            y = ctx.baseplate_top_origin_y
+
+            # Emit LDraw Type-1 line (1x1 plate)
             lines.append(
-                f"1 {color} {x:.6f} {y:.6f} {z:.6f} "
-                "1 0 0 0 1 0 0 0 1 "
-                f"{PLATE_1x1}"
+                f"1 {color} {x:.6f} {y:.6f} {z:.6f} 1 0 0 0 1 0 0 0 1 {PLATE_1x1}"
             )
 
     return lines

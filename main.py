@@ -17,27 +17,29 @@ from minifig import build_minifig, load_minifig_template
 
 
 def build_digits_1_to_10(ctx, cols, rows, color=15):
+
     studs_per_plate = 32
     lines = []
 
-    # Digits 1..9: centered on the 3x3 top area (baseplate centers)
-    for i in range(9):
+    # Logical grid 4 rows x 3 columns
+    for i in range(10):
+
         digit = str(i + 1)
 
-        r = i // 3  # 0..2
-        c = i % 3  # 0..2
+        if i < 9:
+            logical_row = i // 3  # 0,1,2
+            logical_col = i % 3  # 0,1,2
+        else:
+            # 10 centered on last row
+            logical_row = 3
+            logical_col = 1  # middle column
 
-        # IMPORTANT: baseplates are placed by their CENTER in the scene
-        center_x = c * studs_per_plate
-        center_z = r * studs_per_plate
+        center_x = logical_col * studs_per_plate
+
+        # invert vertical axis properly
+        center_z = (rows - 1 - logical_row) * studs_per_plate
 
         lines.extend(build_centered_digit(ctx, digit, center_x, center_z, color))
-
-    # Digit "10": centered on the middle baseplate of the last row
-    center_x = 1 * studs_per_plate  # middle column (col=1)
-    center_z = 3 * studs_per_plate  # last row (row=3)
-
-    lines.extend(build_centered_digit(ctx, "10", center_x, center_z, color))
 
     return lines
 

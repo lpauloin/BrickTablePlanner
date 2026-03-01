@@ -1,7 +1,19 @@
+from context import BASEPLATE_THICKNESS
+
+
 def build_minifig(ctx, template, stud_x, stud_z):
+    """
+    Place a normalized minifig template at the given stud position.
+
+    Assumptions:
+    - Template is already normalized
+    - Template Y=0 corresponds to ground reference
+    - No rotation applied
+    """
+
     dx = ctx.studs(stud_x)
     dz = ctx.studs(stud_z)
-    dy = ctx.baseplate_top_origin_y
+    dy = ctx.ground_y - BASEPLATE_THICKNESS  # just snap to plate
 
     out = []
 

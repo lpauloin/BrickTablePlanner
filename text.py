@@ -257,7 +257,7 @@ LETTERS_5x7 = {
 PLATE_1x1 = "3024.dat"
 
 
-def build_text_from_bottom_left(
+def build_text_from_top_left(
     ctx,
     text,
     start_stud_x,
@@ -266,22 +266,14 @@ def build_text_from_bottom_left(
     letter_spacing=1,
 ):
     """
-    Render a single-line text starting from bottom-left stud position.
+    Render a single-line text starting from TOP-LEFT stud position.
 
     Parameters
     ----------
-    ctx : SceneContext
-        Provides stud → LDraw conversion and baseplate height.
-    text : str
-        Text to render (must exist in LETTERS_5x7).
     start_stud_x : float
         Left-most stud coordinate.
     start_stud_z : float
-        Bottom-most stud coordinate.
-    color : int
-        LDraw color code.
-    letter_spacing : int
-        Number of empty studs between letters.
+        TOP-most stud coordinate.
     """
 
     lines = []
@@ -303,7 +295,9 @@ def build_text_from_bottom_left(
                     continue
 
                 stud_x = cursor_x + col_idx
-                stud_z = start_stud_z + row_idx
+
+                # 🔥 now writing downward
+                stud_z = start_stud_z - row_idx
 
                 x = ctx.studs(stud_x)
                 z = ctx.studs(stud_z)

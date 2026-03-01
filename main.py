@@ -8,9 +8,7 @@ Generate an LDraw model:
 Open the generated .ldr file in BrickLink Studio to preview.
 """
 
-import math
 from pathlib import Path
-from turtledemo.penrose import start
 
 from baseplate import build_baseplate_grid
 from context import SceneContext
@@ -18,7 +16,7 @@ from digits import build_centered_digit
 from minifig import build_minifig
 from plate import build_plate, build_plate_rotated
 from template import load_template, normalize_template_inplace
-from text import build_text_from_bottom_left, LETTERS_5x7
+from text import build_text_from_top_left, LETTERS_5x7
 
 
 def build_group_frame(ctx, center_stud_x, center_stud_z, color=15):
@@ -172,44 +170,40 @@ def build_text_on_baseplate(
     text,
     plate_row,
     plate_col,
+    grid_rows,
     studs_per_plate=32,
     color=15,
     margin=4,
     center=False,
     letter_spacing=1,
+    delta_x=0,
+    delta_z=0,
 ):
     """
     Render text inside a specific baseplate (grid row/col).
 
-    Parameters
-    ----------
-    plate_row : int
-        Row index of baseplate (0 = bottom row).
-    plate_col : int
-        Column index of baseplate (0 = leftmost).
-    studs_per_plate : int
-        Usually 32.
-    margin : int
-        Inner margin in studs.
-    center : bool
-        If True, text is centered inside the baseplate.
-        If False, text starts at bottom-left with margin.
+    Coordinate convention:
+    - plate_col: 0 = left
+    - plate_row: 0 = TOP row (top-left baseplate is (0,0))
     """
 
-    # Compute baseplate bottom-left corner in stud space
+    # Convert "top-origin row index" to "bottom-origin row index"
+    # so the computed Z matches the physical grid placement.
+    row_from_bottom = (grid_rows - 1) - plate_row
+
+    # Baseplate bottom-left corner in stud space
     base_x = plate_col * studs_per_plate
-    base_z = plate_row * studs_per_plate
+    base_z = row_from_bottom * studs_per_plate
 
     # Measure text width in studs
     total_width = 0
-    for char in text.upper():
-        if char not in LETTERS_5x7:
-            raise ValueError(f"Unsupported character: {char}")
-        total_width += len(LETTERS_5x7[char][0]) + letter_spacing
+    for ch in text.upper():
+        if ch not in LETTERS_5x7:
+            raise ValueError(f"Unsupported character: {ch}")
+        total_width += len(LETTERS_5x7[ch][0]) + letter_spacing
+    total_width -= letter_spacing
 
-    total_width -= letter_spacing  # remove trailing spacing
-
-    text_height = 7  # fixed for 5x7 font
+    text_height = 7
 
     if center:
         start_x = base_x + (studs_per_plate - total_width) / 2
@@ -218,13 +212,16 @@ def build_text_on_baseplate(
         start_x = base_x + margin
         start_z = base_z + margin
 
-    return build_text_from_bottom_left(
+    start_x += delta_x
+    start_z += delta_z
+
+    return build_text_from_top_left(
         ctx,
         text,
         start_x,
         start_z,
-        color,
-        letter_spacing,
+        color=color,
+        letter_spacing=letter_spacing,
     )
 
 
@@ -276,16 +273,20 @@ def main():
             "SOPHIE",
             plate_row=0,
             plate_col=0,
+            grid_rows=rows,
             center=True,
+            delta_z=-4,
         )
     )
     lines.extend(
         build_text_on_baseplate(
             ctx,
-            "SOPHIE",
+            "LAURENT",
             plate_row=0,
-            plate_col=0,
+            plate_col=1,
+            grid_rows=rows,
             center=True,
+            delta_z=-18,
         )
     )
 

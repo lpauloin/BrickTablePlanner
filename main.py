@@ -10,6 +10,7 @@ Open the generated .ldr file in BrickLink Studio to preview.
 
 import math
 from pathlib import Path
+from turtledemo.penrose import start
 
 from baseplate import build_baseplate_grid
 from context import SceneContext
@@ -135,13 +136,16 @@ def build_groups_grid(ctx, template, cols, rows, color=15):
             if group_index > 10:
                 break
 
+            # Z offset so grid starts on second row
+            row_offset = 1
+
             # Special case: group 10 must be centered on last row
             if group_index == 10:
                 center_x = (cols // 2) * studs_per_plate
-                center_z = (rows - 1 - r) * studs_per_plate
+                center_z = (rows - 1 - r - row_offset) * studs_per_plate
             else:
                 center_x = c * studs_per_plate
-                center_z = (rows - 1 - r) * studs_per_plate
+                center_z = (rows - 1 - r - row_offset) * studs_per_plate
 
             lines.extend(
                 build_group(

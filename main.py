@@ -21,24 +21,24 @@ from template import load_template, normalize_template_inplace
 
 def build_group_frame(ctx, center_stud_x, center_stud_z, color=15):
     """
-    Build a 1-stud-thick rectangular frame (1xN plates) around a group.
+    Build a 1-stud thick rectangular frame (1xN plates).
 
-    Important LDraw detail:
-    - A plate's X/Z position is the CENTER of the part, not its corner.
-    - Therefore we must offset by (length-1)/2 in stud space.
+    Dimensions:
+        width  = 32 studs
+        height = 30 studs
 
-    No overlap policy:
-    - Horizontal bars include the 4 corners
-    - Vertical bars exclude corners (height-2)
+    Rules:
+        - Horizontal bars include corners
+        - Vertical bars exclude corners (no overlap)
+        - LDraw coordinates represent the CENTER of the plate
     """
 
     lines = []
 
-    width = 28  # studs
-    height = 22  # studs
+    width = 32
+    height = 30
 
-    # For an even width/height, the "stud-accurate" rectangle center sits on a half-stud.
-    # Using (N-1)/2 makes the border land exactly on stud grid.
+    # Proper stud-aligned rectangle
     left = center_stud_x - (width - 1) / 2
     right = left + (width - 1)
 
@@ -46,29 +46,27 @@ def build_group_frame(ctx, center_stud_x, center_stud_z, color=15):
     top = bottom + (height - 1)
 
     # -------------------------
-    # TOP & BOTTOM (full width)
-    # width = 28 = 12 + 12 + 4
+    # TOP & BOTTOM (32 = 12 + 12 + 8)
     # -------------------------
-    horizontal_segments = [12, 12, 4]
+    horizontal_segments = [12, 12, 8]
 
     for z_edge in (bottom, top):
         x_start = left
+
         for length in horizontal_segments:
-            # place plate by its CENTER
             x_center = x_start + (length - 1) / 2
             lines.append(build_plate(ctx, x_center, z_edge, color, length))
             x_start += length
 
     # --------------------------------
-    # LEFT & RIGHT (exclude corners)
-    # height_without_corners = 22 - 2 = 20 = 12 + 8
+    # LEFT & RIGHT (30 - 2 = 28 = 12 + 12 + 4)
     # --------------------------------
-    vertical_segments = [12, 8]
+    vertical_segments = [12, 12, 4]
 
     for x_edge in (left, right):
-        z_start = bottom + 1  # exclude bottom corner row
+        z_start = bottom + 1  # exclude bottom corner
+
         for length in vertical_segments:
-            # rotated plate: its LENGTH runs along Z => center is on Z
             z_center = z_start + (length - 1) / 2
             lines.append(build_plate_rotated(ctx, x_edge, z_center, color, length))
             z_start += length

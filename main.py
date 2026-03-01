@@ -8,6 +8,7 @@ Generate an LDraw model:
 Open the generated .ldr file in BrickLink Studio to preview.
 """
 
+import math
 from pathlib import Path
 
 from baseplate import build_baseplate_grid
@@ -16,34 +17,49 @@ from digits import build_centered_digit
 from minifig import build_minifig
 from template import load_template, normalize_template_inplace
 
-import math
-
 
 def build_group(ctx, template, digit, center_stud_x, center_stud_z, color=15):
 
     lines = []
 
-    # Center digit
-    lines.extend(build_centered_digit(ctx, digit, center_stud_x, center_stud_z, color))
-
-    # Fixed radius for all groups
-    radius = 11
-
-    # Place 10 minifigs evenly in a circle
-    for i in range(10):
-        angle = 2 * math.pi * i / 10
-
-        fx = center_stud_x + radius * math.cos(angle)
-        fz = center_stud_z + radius * math.sin(angle)
-
-        lines.extend(
-            build_minifig(
-                ctx,
-                template,
-                stud_x=fx,
-                stud_z=fz,
-            )
+    # --- Place digit in the center ---
+    lines.extend(
+        build_centered_digit(
+            ctx,
+            digit,
+            center_stud_x,
+            center_stud_z,
+            color,
         )
+    )
+
+    spacing = 8  # distance between minifigs (studs)
+
+    cols = 4
+    rows = 3
+
+    for row in range(rows):
+        for col in range(cols):
+
+            # Skip the two center positions on the middle row
+            if row == 1 and col in (1, 2):
+                continue
+
+            # Compute centered offsets
+            x_offset = (col - (cols - 1) / 2) * spacing
+            z_offset = (row - (rows - 1) / 2) * spacing
+
+            fx = center_stud_x + x_offset
+            fz = center_stud_z + z_offset
+
+            lines.extend(
+                build_minifig(
+                    ctx,
+                    template,
+                    stud_x=fx,
+                    stud_z=fz,
+                )
+            )
 
     return lines
 

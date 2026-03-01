@@ -1,4 +1,4 @@
-# baseplate.py
+PLATE_32x32 = "3811.dat"
 
 
 def build_baseplate_grid(ctx, cols, rows, color=1, origin_x_stud=0, origin_z_stud=0):
@@ -12,6 +12,6 @@ def build_baseplate_grid(ctx, cols, rows, color=1, origin_x_stud=0, origin_z_stu
             y = ctx.baseplate_origin_y
             z = ctx.studs(origin_z_stud + r * 32)
 
-            lines.append(f"1 {color} {x} {y} {z} 1 0 0 0 1 0 0 0 1 3811.dat")
+            lines.append(f"1 {color} {x} {y} {z} 1 0 0 0 1 0 0 0 1 {PLATE_32x32}")
 
     return lines

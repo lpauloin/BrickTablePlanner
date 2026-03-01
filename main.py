@@ -11,35 +11,79 @@ Open the generated .ldr file in BrickLink Studio to preview.
 from pathlib import Path
 
 from baseplate import build_baseplate_grid
-from context import SceneContext, grid_center_in_studs
+from context import SceneContext
 from digits import build_centered_digit
-from minifig import build_minifig, load_minifig_template
+from minifig import build_minifig
+from template import load_template, normalize_template_inplace
+
+import math
 
 
-def build_digits_1_to_10(ctx, cols, rows, color=15):
+def build_group(ctx, template, digit, center_stud_x, center_stud_z, color=15):
+
+    lines = []
+
+    # Center digit
+    lines.extend(build_centered_digit(ctx, digit, center_stud_x, center_stud_z, color))
+
+    # Fixed radius for all groups
+    radius = 11
+
+    # Place 10 minifigs evenly in a circle
+    for i in range(10):
+        angle = 2 * math.pi * i / 10
+
+        fx = center_stud_x + radius * math.cos(angle)
+        fz = center_stud_z + radius * math.sin(angle)
+
+        lines.extend(
+            build_minifig(
+                ctx,
+                template,
+                stud_x=fx,
+                stud_z=fz,
+            )
+        )
+
+    return lines
+
+
+def build_groups_grid(ctx, template, cols, rows, color=15):
 
     studs_per_plate = 32
     lines = []
 
-    # Logical grid 4 rows x 3 columns
-    for i in range(10):
+    group_index = 1
 
-        digit = str(i + 1)
+    for r in range(rows):
+        for c in range(cols):
 
-        if i < 9:
-            logical_row = i // 3  # 0,1,2
-            logical_col = i % 3  # 0,1,2
-        else:
-            # 10 centered on last row
-            logical_row = 3
-            logical_col = 1  # middle column
+            if group_index > 10:
+                break
 
-        center_x = logical_col * studs_per_plate
+            # Special case: group 10 must be centered on last row
+            if group_index == 10:
+                center_x = (cols // 2) * studs_per_plate
+                center_z = (rows - 1 - r) * studs_per_plate
+            else:
+                center_x = c * studs_per_plate
+                center_z = (rows - 1 - r) * studs_per_plate
 
-        # invert vertical axis properly
-        center_z = (rows - 1 - logical_row) * studs_per_plate
+            lines.extend(
+                build_group(
+                    ctx,
+                    template,
+                    str(group_index),
+                    center_x,
+                    center_z,
+                    color,
+                )
+            )
 
-        lines.extend(build_centered_digit(ctx, digit, center_x, center_z, color))
+            group_index += 1
+
+        if group_index > 10:
+            break
 
     return lines
 
@@ -53,7 +97,7 @@ def main():
     ctx = SceneContext(ground_y=0)
 
     cols = 3
-    rows = 4
+    rows = 5
 
     # ---------------------------------------------------------------------
     # Build model
@@ -72,19 +116,20 @@ def main():
     # 1) Baseplate grid (each 3811.dat is 32x32 studs)
     lines.extend(build_baseplate_grid(ctx, cols=cols, rows=rows, color=1))
 
-    # 2) Compute the *true* grid center (in studs)
-    #    Note: baseplates are placed by *center*, so the grid center is not
-    #    simply (total_studs / 2).
-    center_stud_x, center_stud_z = grid_center_in_studs(cols, rows)
-
-    # 3) Add a single centered digit
-    # lines.extend(build_centered_digit(ctx, "0", center_stud_x, center_stud_z, color=15))
-    lines.extend(build_digits_1_to_10(ctx, cols, rows, color=15))
-
     # 4) Add the minifig template (kept to preserve current output)
     template_path = project_dir / "template" / "minifig.ldr"
-    tpl = load_minifig_template(template_path)
-    lines.extend(build_minifig(ctx, tpl, stud_x=center_stud_x, stud_z=center_stud_z))
+    tpl = load_template(template_path)
+    normalize_template_inplace(tpl)
+
+    lines.extend(
+        build_groups_grid(
+            ctx,
+            tpl,
+            cols=cols,
+            rows=rows,
+            color=15,
+        )
+    )
 
     # ---------------------------------------------------------------------
     # Export

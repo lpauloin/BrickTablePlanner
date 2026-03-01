@@ -18,6 +18,7 @@ from digits import build_centered_digit
 from minifig import build_minifig
 from plate import build_plate, build_plate_rotated
 from template import load_template, normalize_template_inplace
+from text import build_text_from_bottom_left, LETTERS_5x7
 
 
 def build_group_frame(ctx, center_stud_x, center_stud_z, color=15):
@@ -166,6 +167,67 @@ def build_groups_grid(ctx, template, cols, rows, color=15):
     return lines
 
 
+def build_text_on_baseplate(
+    ctx,
+    text,
+    plate_row,
+    plate_col,
+    studs_per_plate=32,
+    color=15,
+    margin=4,
+    center=False,
+    letter_spacing=1,
+):
+    """
+    Render text inside a specific baseplate (grid row/col).
+
+    Parameters
+    ----------
+    plate_row : int
+        Row index of baseplate (0 = bottom row).
+    plate_col : int
+        Column index of baseplate (0 = leftmost).
+    studs_per_plate : int
+        Usually 32.
+    margin : int
+        Inner margin in studs.
+    center : bool
+        If True, text is centered inside the baseplate.
+        If False, text starts at bottom-left with margin.
+    """
+
+    # Compute baseplate bottom-left corner in stud space
+    base_x = plate_col * studs_per_plate
+    base_z = plate_row * studs_per_plate
+
+    # Measure text width in studs
+    total_width = 0
+    for char in text.upper():
+        if char not in LETTERS_5x7:
+            raise ValueError(f"Unsupported character: {char}")
+        total_width += len(LETTERS_5x7[char][0]) + letter_spacing
+
+    total_width -= letter_spacing  # remove trailing spacing
+
+    text_height = 7  # fixed for 5x7 font
+
+    if center:
+        start_x = base_x + (studs_per_plate - total_width) / 2
+        start_z = base_z + (studs_per_plate - text_height) / 2
+    else:
+        start_x = base_x + margin
+        start_z = base_z + margin
+
+    return build_text_from_bottom_left(
+        ctx,
+        text,
+        start_x,
+        start_z,
+        color,
+        letter_spacing,
+    )
+
+
 def main():
     project_dir = Path(__file__).parent
     build_dir = project_dir / "build"
@@ -206,6 +268,24 @@ def main():
             cols=cols,
             rows=rows,
             color=15,
+        )
+    )
+    lines.extend(
+        build_text_on_baseplate(
+            ctx,
+            "SOPHIE",
+            plate_row=0,
+            plate_col=0,
+            center=True,
+        )
+    )
+    lines.extend(
+        build_text_on_baseplate(
+            ctx,
+            "SOPHIE",
+            plate_row=0,
+            plate_col=0,
+            center=True,
         )
     )
 

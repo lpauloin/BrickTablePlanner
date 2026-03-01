@@ -11,12 +11,19 @@ Open the generated .ldr file in BrickLink Studio to preview.
 from pathlib import Path
 
 from baseplate import build_baseplate_grid
+from bom import generate_bom_from_lines, print_bom, print_global_summary
 from context import SceneContext
 from digits import build_centered_digit
 from minifig import build_minifig
 from plate import build_plate, build_plate_rotated
 from template import load_template, normalize_template_inplace
 from text import build_text_from_top_left, LETTERS_5x7
+
+
+def add_section(lines, title):
+    lines.append("0")
+    lines.append(f"0 ===== {title} =====")
+    lines.append("0")
 
 
 def build_group_frame(ctx, center_stud_x, center_stud_z, color=15):
@@ -78,7 +85,10 @@ def build_group(ctx, template, digit, center_stud_x, center_stud_z, color=15):
 
     lines = []
 
-    # --- Place digit in the center ---
+    add_section(lines, f"GROUP {digit}")
+
+    lines.append(f"0 -- Digit {digit} --")
+
     lines.extend(
         build_centered_digit(
             ctx,
@@ -89,19 +99,18 @@ def build_group(ctx, template, digit, center_stud_x, center_stud_z, color=15):
         )
     )
 
-    spacing = 8  # distance between minifigs (studs)
+    lines.append("0 -- Minifigures --")
 
+    spacing = 8
     cols = 4
     rows = 3
 
     for row in range(rows):
         for col in range(cols):
 
-            # Skip the two center positions on the middle row
             if row == 1 and col in (1, 2):
                 continue
 
-            # Compute centered offsets
             x_offset = (col - (cols - 1) / 2) * spacing
             z_offset = (row - (rows - 1) / 2) * spacing
 
@@ -117,6 +126,8 @@ def build_group(ctx, template, digit, center_stud_x, center_stud_z, color=15):
                 )
             )
 
+    lines.append("0 -- Frame --")
+
     lines.extend(build_group_frame(ctx, center_stud_x, center_stud_z))
 
     return lines
@@ -127,6 +138,8 @@ def build_groups_grid(ctx, template, cols, rows, color=15):
     studs_per_plate = 32
     lines = []
 
+    add_section(lines, "ALL GROUPS")
+
     group_index = 1
 
     for r in range(rows):
@@ -135,10 +148,8 @@ def build_groups_grid(ctx, template, cols, rows, color=15):
             if group_index > 10:
                 break
 
-            # Z offset so grid starts on second row
             row_offset = 1
 
-            # Special case: group 10 must be centered on last row
             if group_index == 10:
                 center_x = (cols // 2) * studs_per_plate
                 center_z = (rows - 1 - r - row_offset) * studs_per_plate
@@ -250,10 +261,18 @@ def main():
         "0",
     ]
 
-    # 1) Baseplate grid (each 3811.dat is 32x32 studs)
+    # -------------------------
+    # BASEPLATES
+    # -------------------------
+    add_section(lines, "BASEPLATES")
+
     lines.extend(build_baseplate_grid(ctx, cols=cols, rows=rows, color=1))
 
-    # 4) Add the minifig template (kept to preserve current output)
+    # -------------------------
+    # GROUPS (Digits + Minifigs + Frames)
+    # -------------------------
+    add_section(lines, "GROUPS")
+
     template_path = project_dir / "template" / "minifig.ldr"
     tpl = load_template(template_path)
     normalize_template_inplace(tpl)
@@ -267,6 +286,12 @@ def main():
             color=15,
         )
     )
+
+    # -------------------------
+    # TEXT
+    # -------------------------
+    add_section(lines, "TEXT - SOPHIE")
+
     lines.extend(
         build_text_on_baseplate(
             ctx,
@@ -278,6 +303,9 @@ def main():
             delta_z=-4,
         )
     )
+
+    add_section(lines, "TEXT - LAURENT")
+
     lines.extend(
         build_text_on_baseplate(
             ctx,
@@ -289,13 +317,16 @@ def main():
             delta_z=-18,
         )
     )
-
     # ---------------------------------------------------------------------
     # Export
     # ---------------------------------------------------------------------
     output_path = build_dir / "plateau_digits.ldr"
     output_path.write_text("\n".join(lines), encoding="utf-8")
     print(f"✅ File generated: {output_path}")
+
+    bom = generate_bom_from_lines(lines)
+    print_bom(bom)
+    print_global_summary(bom)
 
 
 if __name__ == "__main__":

@@ -21,6 +21,22 @@ PLATES = {
 }
 
 
+def get_plate_size(part_id):
+    """
+    Return (width, length) tuple for a plate part.
+    Returns None if not found.
+    """
+
+    part = part_id.replace(".dat", "")
+
+    for width, length_dict in PLATES.items():
+        for length, ref in length_dict.items():
+            if part == ref.replace(".dat", ""):
+                return (width, length)
+
+    return None
+
+
 def build_plate(ctx, stud_x, stud_z, color, length):
     x = ctx.studs(stud_x)
     z = ctx.studs(stud_z)
